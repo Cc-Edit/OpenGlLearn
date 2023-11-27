@@ -11,7 +11,9 @@
 #include "stb_image.h"
 #include <iostream>
 #include <stdio.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 // 声明函数
 // 按键事件，按下esc按钮时退出窗口
 void processInput(GLFWwindow *window)
@@ -38,9 +40,10 @@ const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 2) in vec2 aTexCoord;\n"
     "out vec3 ourColor;\n"
     "out vec2 TexCoord;\n"
+    "uniform mat4 transform;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position = vec4(aPos,1.0);\n"
+    "   gl_Position = transform * vec4(aPos, 1.0f);\n"
     "   ourColor = aColor;\n"
     "   TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n"
     "}\0";
@@ -269,6 +272,24 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture_sec);
+        
+        // 定义空间变换
+        glm::mat4 transform = glm::mat4(1.0f); // 声明一个单位矩阵
+        transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f)); // 将元素移动到中心
+        // 根据渲染时间，sin函数的定义，其返回值的范围是 [-1, 1], 计算为 0 - 1 范围内的一个值
+        float time = float(glfwGetTime());
+        float scale = (sin(time) / 2.0f) + 0.5f;
+        transform = glm::rotate(transform, time, glm::vec3(0.0f, 1.0f, 1.0f)); // 绕Y、Z轴旋转,
+        transform = glm::scale(transform, glm::vec3(scale, scale, scale)); // 三个轴的缩放
+        // 查询uniform变量地址
+        unsigned int transformLoc = glGetUniformLocation(shaderProgram, "transform");
+        // 将变换矩阵传递到着色器的uniform变量中
+        //    参数说明：
+        //    1. uniform 变量地址
+        //    2. 传递的矩阵个数
+        //    3. 是否对矩阵进行转置，行列交换
+        //    4. 矩阵数据
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
         
         // 使用挂载了着色器的程序对象
         glUseProgram(shaderProgram);
